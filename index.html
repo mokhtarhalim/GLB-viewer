@@ -73,6 +73,9 @@
   .btn:hover{background:#252D45}
   .btn.primary{background:var(--accent2); border-color:transparent}
   .btn.primary:hover{background:#5B54EA}
+  .pagelinks{display:flex; gap:14px; margin-right:4px}
+  .pagelinks a{color:var(--muted); text-decoration:none; font-size:12.5px; font-weight:600}
+  .pagelinks a:hover{color:var(--ink); text-decoration:underline}
   .btn[aria-pressed="true"]{background:var(--accent2); border-color:transparent}
   label.btn{display:inline-block}
   input[type=file]{display:none}
@@ -144,6 +147,10 @@
   <button class="btn" id="btnBg">Dark background</button>
   <button class="btn" id="btnReset">Reset camera</button>
   <span class="sp"></span>
+  <nav class="pagelinks">
+    <a href="./how-it-works.html">How it works</a>
+    <a href="./faq.html">FAQ</a>
+  </nav>
   <button class="btn" id="btnPanel">Hide details</button>
 </header>
 
@@ -155,6 +162,9 @@
         <div><b>Drag a .glb anywhere</b></div>
         <div style="margin-top:6px">or use <code>Open .glb</code> above</div>
         <div style="margin-top:14px;font-size:12px">Drop two files (or pick two at once) to compare them side by side</div>
+        <div style="margin-top:14px;font-size:11.5px;max-width:340px">Free, private .glb/.gltf viewer — inspect triangle count, materials,
+        textures, and Draco/Meshopt/KTX2 compression, entirely in your browser.
+        Nothing is ever uploaded. <a href="./how-it-works.html" style="color:var(--accent)">How it works</a></div>
       </div>
     </div>
   </div>

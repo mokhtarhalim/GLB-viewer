@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — GLB Viewer</title>
+<meta name="description" content="Frequently asked questions about GLB Viewer: what .glb/.gltf files are, whether files are uploaded, Draco/Meshopt/KTX2 compression support, comparing two models, and offline use.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0F1424">
+<link rel="canonical" href="https://mokhtarhalim.github.io/GLB-viewer/faq.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234F46E5'/%3E%3Ctext x='50' y='69' font-size='56' text-anchor='middle' fill='%23fff' font-family='system-ui,sans-serif' font-weight='700'%3EG%3C/text%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GLB Viewer — Frequently Asked Questions">
+<meta property="og:description" content="What .glb/.gltf files are, whether files are uploaded, compression support, comparing two models, and offline use.">
+<meta property="og:url" content="https://mokhtarhalim.github.io/GLB-viewer/faq.html">
+<meta property="og:site_name" content="GLB Viewer">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is a .glb file?",
+      "acceptedAnswer": { "@type": "Answer", "text": "A .glb file is the binary form of glTF (\"GL Transmission Format\"), a standard for 3D models. It packs the scene description (nodes, meshes, materials), all geometry, and all textures into a single binary file, which is why .glb files are the common choice for sharing or previewing a 3D asset as one file." }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between .glb and .gltf?",
+      "acceptedAnswer": { "@type": "Answer", "text": "They're the same format, packaged differently. .glb is one self-contained binary file. .gltf is a JSON text file that typically references separate texture and binary geometry files alongside it. GLB Viewer opens either." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my 3D model uploaded anywhere?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The file is read entirely in your browser using local APIs (file.arrayBuffer() and URL.createObjectURL()). There is no backend and no network request ever carries your model's contents." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GLB Viewer work offline?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, once the page has loaded once. The 3D renderer (<model-viewer>) and the Draco decoder are both self-hosted with the site rather than pulled from a CDN, so opening and inspecting files keeps working with no network access." }
+    },
+    {
+      "@type": "Question",
+      "name": "What is Draco compression?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Draco (KHR_draco_mesh_compression) is a glTF extension that compresses mesh geometry to significantly reduce file size. GLB Viewer detects it automatically and decodes it locally using a bundled Draco decoder, with no server round-trip needed." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GLB Viewer support Meshopt, WebP, or KTX2?",
+      "acceptedAnswer": { "@type": "Answer", "text": "GLB Viewer detects and flags all of these in the extensionsUsed list shown in the stats panel — Meshopt compression, WebP textures, and KTX2 textures — alongside Draco, so you can see at a glance which optimizations an exported file is using." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I compare two 3D models at once?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — drop or pick two files at once, or drag a second file onto the right-hand viewport, to view them side by side. Their cameras stay synced (orbit, target, and field of view), and the stats panel shows the size, triangle count, and texture deltas between the two." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is GLB Viewer free to use?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, it's completely free, with no signup and no limits." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a file size limit?",
+      "acceptedAnswer": { "@type": "Answer", "text": "There's no limit imposed by the tool itself — the practical ceiling is your browser's available memory, the same as it would be for any other tab handling a large binary file." }
+    }
+  ]
+}
+</script>
+
+<style>
+  :root{
+    --bg:#0F1424; --panel:#171D30; --panel2:#1E2539; --line:rgba(255,255,255,.10);
+    --ink:#EEF1F8; --muted:#96A0BC; --accent:#818CF8; --accent2:#4F46E5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.7 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  header{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header a.home{color:var(--ink); text-decoration:none; font-weight:650; font-size:15px}
+  header nav{display:flex; gap:16px; margin-left:auto}
+  header nav a{color:var(--muted); text-decoration:none; font-size:13px}
+  header nav a:hover{color:var(--ink)}
+  header nav a.open{background:var(--accent2); padding:6px 12px; border-radius:8px; color:#fff; font-weight:600}
+  main{max-width:720px; margin:0 auto; padding:36px 20px 80px}
+  h1{font-size:26px; margin:0 0 8px}
+  .lede{color:var(--muted); font-size:15px; margin-bottom:28px}
+  .qa{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:14px 0}
+  .qa h2{font-size:15.5px; margin:0 0 8px; color:var(--accent)}
+  .qa p{margin:0; color:var(--ink)}
+  a{color:var(--accent)}
+  .cta{margin-top:40px; text-align:center}
+  .cta a{display:inline-block; background:var(--accent2); color:#fff; text-decoration:none; padding:10px 20px; border-radius:9px; font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="./index.html">GLB Viewer</a>
+  <nav>
+    <a href="./how-it-works.html">How it works</a>
+    <a class="open" href="./index.html">Open the viewer</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Frequently Asked Questions</h1>
+  <p class="lede">Common questions about GLB Viewer, glTF files, and how the tool handles
+  compression and privacy.</p>
+
+  <div class="qa">
+    <h2>What is a .glb file?</h2>
+    <p>A .glb file is the binary form of glTF ("GL Transmission Format"), a standard for
+    3D models. It packs the scene description (nodes, meshes, materials), all geometry,
+    and all textures into a single binary file, which is why .glb files are the common
+    choice for sharing or previewing a 3D asset as one file.</p>
+  </div>
+
+  <div class="qa">
+    <h2>What's the difference between .glb and .gltf?</h2>
+    <p>They're the same format, packaged differently. .glb is one self-contained binary
+    file. .gltf is a JSON text file that typically references separate texture and binary
+    geometry files alongside it. GLB Viewer opens either.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Is my 3D model uploaded anywhere?</h2>
+    <p>No. The file is read entirely in your browser using local APIs
+    (<code>file.arrayBuffer()</code> and <code>URL.createObjectURL()</code>). There is no
+    backend and no network request ever carries your model's contents.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Does GLB Viewer work offline?</h2>
+    <p>Yes, once the page has loaded once. The 3D renderer (&lt;model-viewer&gt;) and the
+    Draco decoder are both self-hosted with the site rather than pulled from a CDN, so
+    opening and inspecting files keeps working with no network access.</p>
+  </div>
+
+  <div class="qa">
+    <h2>What is Draco compression?</h2>
+    <p>Draco (<code>KHR_draco_mesh_compression</code>) is a glTF extension that compresses
+    mesh geometry to significantly reduce file size. GLB Viewer detects it automatically
+    and decodes it locally using a bundled Draco decoder, with no server round-trip
+    needed.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Does GLB Viewer support Meshopt, WebP, or KTX2?</h2>
+    <p>GLB Viewer detects and flags all of these in the <code>extensionsUsed</code> list
+    shown in the stats panel — Meshopt compression, WebP textures, and KTX2 textures —
+    alongside Draco, so you can see at a glance which optimizations an exported file is
+    using.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Can I compare two 3D models at once?</h2>
+    <p>Yes — drop or pick two files at once, or drag a second file onto the right-hand
+    viewport, to view them side by side. Their cameras stay synced (orbit, target, and
+    field of view), and the stats panel shows the size, triangle count, and texture
+    deltas between the two.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Is GLB Viewer free to use?</h2>
+    <p>Yes, it's completely free, with no signup and no limits.</p>
+  </div>
+
+  <div class="qa">
+    <h2>Is there a file size limit?</h2>
+    <p>There's no limit imposed by the tool itself — the practical ceiling is your
+    browser's available memory, the same as it would be for any other tab handling a
+    large binary file.</p>
+  </div>
+
+  <div class="cta">
+    <a href="./index.html">Try it — open a .glb file →</a>
+  </div>
+</main>
+
+</body>
+</html>

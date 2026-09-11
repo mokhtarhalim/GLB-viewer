@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How It Works — GLB Viewer</title>
+<meta name="description" content="How GLB Viewer reads .glb/.gltf files entirely in your browser: binary chunk parsing, stats extraction, Draco decompression, and rendering — with nothing ever uploaded to a server.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0F1424">
+<link rel="canonical" href="https://mokhtarhalim.github.io/GLB-viewer/how-it-works.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234F46E5'/%3E%3Ctext x='50' y='69' font-size='56' text-anchor='middle' fill='%23fff' font-family='system-ui,sans-serif' font-weight='700'%3EG%3C/text%3E%3C/svg%3E">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How GLB Viewer Works">
+<meta property="og:description" content="How GLB Viewer reads .glb/.gltf files entirely in your browser — no server, no upload.">
+<meta property="og:url" content="https://mokhtarhalim.github.io/GLB-viewer/how-it-works.html">
+<meta property="og:site_name" content="GLB Viewer">
+<style>
+  :root{
+    --bg:#0F1424; --panel:#171D30; --panel2:#1E2539; --line:rgba(255,255,255,.10);
+    --ink:#EEF1F8; --muted:#96A0BC; --accent:#818CF8; --accent2:#4F46E5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.7 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  header{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header a.home{color:var(--ink); text-decoration:none; font-weight:650; font-size:15px}
+  header nav{display:flex; gap:16px; margin-left:auto}
+  header nav a{color:var(--muted); text-decoration:none; font-size:13px}
+  header nav a:hover{color:var(--ink)}
+  header nav a.open{color:#0F1424; background:var(--accent2); background:linear-gradient(var(--accent2),var(--accent2)); padding:6px 12px; border-radius:8px; color:#fff; font-weight:600}
+  main{max-width:720px; margin:0 auto; padding:36px 20px 80px}
+  h1{font-size:26px; margin:0 0 8px}
+  .lede{color:var(--muted); font-size:15px; margin-bottom:32px}
+  h2{font-size:18px; margin:34px 0 10px; color:var(--accent)}
+  p{margin:10px 0}
+  code{background:var(--panel2); padding:2px 6px; border-radius:5px; font-size:13px; color:var(--accent)}
+  ul{padding-left:20px}
+  li{margin:6px 0}
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:16px 0}
+  a{color:var(--accent)}
+  .cta{margin-top:40px; text-align:center}
+  .cta a{display:inline-block; background:var(--accent2); color:#fff; text-decoration:none; padding:10px 20px; border-radius:9px; font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="./index.html">GLB Viewer</a>
+  <nav>
+    <a href="./faq.html">FAQ</a>
+    <a class="open" href="./index.html">Open the viewer</a>
+  </nav>
+</header>
+
+<main>
+  <h1>How GLB Viewer Works</h1>
+  <p class="lede">A plain-English walkthrough of what actually happens when you drop a
+  <code>.glb</code> or <code>.gltf</code> file onto the page — and why nothing about that
+  process ever touches a server.</p>
+
+  <h2>1. Your file never leaves your browser</h2>
+  <p>When you drag a file onto the page or pick one from the file dialog, the browser
+  hands GLB Viewer a local <code>File</code> object. The tool reads it with
+  <code>file.arrayBuffer()</code> and creates a local blob URL via
+  <code>URL.createObjectURL()</code> — both are built-in browser APIs that operate purely
+  in memory. There is no upload step, no backend, and no network request involving your
+  model's contents at any point.</p>
+
+  <h2>2. Reading the stats directly from the binary container</h2>
+  <p>A <code>.glb</code> file is a binary container: a short header followed by a JSON
+  chunk (the glTF scene description — nodes, meshes, materials, textures) and a binary
+  chunk (the actual vertex/index/image data). GLB Viewer parses that JSON chunk directly
+  to compute:</p>
+  <ul>
+    <li>Triangle count, and mesh / primitive / material / node counts</li>
+    <li>Per-texture dimensions and byte size, and texture share of total file size</li>
+    <li>Which glTF <code>extensionsUsed</code> the file relies on — flagging Draco,
+      Meshopt, WebP, and KTX2 specifically</li>
+    <li>The exporting tool's <code>asset.generator</code> string, when present</li>
+  </ul>
+  <p>This is hand-rolled parsing rather than a general-purpose glTF library, on purpose —
+  it keeps the tool dependency-free and means the stats panel reflects exactly what's in
+  the file, not an interpretation of it.</p>
+
+  <h2>3. Rendering with &lt;model-viewer&gt;</h2>
+  <p>Once the stats are read, the same local blob URL is handed to
+  <a href="https://modelviewer.dev/" target="_blank" rel="noopener noreferrer">&lt;model-viewer&gt;</a>,
+  Google's web component for displaying 3D models via WebGL. It's loaded from a
+  self-hosted copy bundled with this site rather than a CDN, so rendering keeps working
+  even with no network access after the first page load.</p>
+
+  <h2>4. Decoding Draco-compressed geometry locally</h2>
+  <p>Files that use <code>KHR_draco_mesh_compression</code> to shrink mesh geometry are
+  decoded by a self-hosted Draco decoder (WebAssembly + JS glue), also bundled with the
+  site. No round-trip to Google's CDN is needed to decompress a Draco model.</p>
+
+  <h2>5. Comparing two models side by side</h2>
+  <div class="card">
+    <p style="margin:0">Drop or pick two files at once — or drag a second file directly
+    onto the right-hand viewport once one model is already loaded — to open both side by
+    side. Their cameras (orbit, target, and field of view) stay in sync: drag either
+    viewport and the other follows, so it's easy to compare geometry, texture quality, or
+    compression settings before/after an export change. The stats panel also shows the
+    size, triangle, and texture deltas between the two.</p>
+  </div>
+
+  <div class="cta">
+    <a href="./index.html">Try it — open a .glb file →</a>
+  </div>
+</main>
+
+</body>
+</html>
