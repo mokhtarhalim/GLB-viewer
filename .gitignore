@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Internal Claude Code project instructions and working notes —
+# not meant for public GitHub visitors, kept local-only on purpose.
+CLAUDE.md
+NOTES.local.md

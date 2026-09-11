@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mokhtarhalim.github.io/GLB-viewer/sitemap.xml

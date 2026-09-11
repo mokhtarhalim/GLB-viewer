@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GLB Viewer — Free Online .glb/.gltf 3D Model Viewer & Comparison Tool</title>
+<meta name="description" content="Free, private, browser-based .glb and .gltf viewer. Drag and drop a 3D model to inspect triangle count, materials, textures, and Draco/Meshopt/KTX2 compression — or compare two models side by side with synced cameras. Nothing is ever uploaded; everything runs locally in your browser.">
+<meta name="keywords" content="glb viewer, gltf viewer, 3d model viewer online, glb file viewer, view glb online, compare 3d models, draco compression viewer, gltf inspector">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0F1424">
+<link rel="canonical" href="https://mokhtarhalim.github.io/GLB-viewer/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234F46E5'/%3E%3Ctext x='50' y='69' font-size='56' text-anchor='middle' fill='%23fff' font-family='system-ui,sans-serif' font-weight='700'%3EG%3C/text%3E%3C/svg%3E">
+
+<!-- Open Graph / social sharing -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="GLB Viewer — Free Online .glb/.gltf 3D Model Viewer">
+<meta property="og:description" content="Drag and drop a .glb or .gltf file to inspect its stats, or compare two models side by side with synced cameras. 100% client-side — nothing is ever uploaded.">
+<meta property="og:url" content="https://mokhtarhalim.github.io/GLB-viewer/">
+<meta property="og:site_name" content="GLB Viewer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GLB Viewer — Free Online .glb/.gltf 3D Model Viewer">
+<meta name="twitter:description" content="Drag and drop a .glb or .gltf file to inspect its stats, or compare two models side by side. 100% client-side, nothing uploaded.">
+
+<!-- Structured data so search engines can render a rich result for a free web app -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "GLB Viewer",
+  "url": "https://mokhtarhalim.github.io/GLB-viewer/",
+  "description": "Free, private, browser-based .glb and .gltf 3D model viewer with stats inspection and side-by-side A/B comparison. Nothing is ever uploaded.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any (runs in any modern browser)",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<!-- Fully static, zero-build, zero-dependency page. model-viewer + the Draco
+     decoder are self-hosted here (not pulled from Google's CDN), so
+     Draco-compressed .glb files open even with no network access, and the
+     page works from any static host with no CORS/allowlist setup needed. -->
+<!-- MUST come before the model-viewer script: it reads `self.ModelViewerElement` once at
+     script-init (`c.dracoDecoderLocation || "https://www.gstatic.com/draco/..."`)
+     and fetches the decoder immediately. Setting the static property afterwards
+     updates the value but arrives too late to stop the CDN request. -->
+<script>self.ModelViewerElement = { dracoDecoderLocation: './draco/' };</script>
+<script type="module" src="./glb-viewer/mv-module.js"></script>
+<style>
+  :root{
+    --bg:#0F1424; --panel:#171D30; --panel2:#1E2539; --line:rgba(255,255,255,.10);
+    --ink:#EEF1F8; --muted:#96A0BC; --accent:#818CF8; --accent2:#4F46E5;
+    --ok:#34D399; --warn:#FBBF24; --bad:#F87171;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header h1{font-size:15px; margin:0; font-weight:650; letter-spacing:.2px}
+  header .sp{flex:1}
+  .btn{
+    border:1px solid var(--line); background:var(--panel2); color:var(--ink);
+    border-radius:9px; padding:7px 12px; font-size:12.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{background:#252D45}
+  .btn.primary{background:var(--accent2); border-color:transparent}
+  .btn.primary:hover{background:#5B54EA}
+  .btn[aria-pressed="true"]{background:var(--accent2); border-color:transparent}
+  label.btn{display:inline-block}
+  input[type=file]{display:none}
+
+  main{flex:1; display:flex; min-height:0; min-width:0}
+  #stage{flex:1; display:flex; min-width:0; min-height:0; gap:1px; background:var(--line)}
+  .slot{flex:1; min-width:0; min-height:0; position:relative; background:#F3F4F8; display:flex}
+  .slot.empty{background:var(--bg)}
+  model-viewer{width:100%; height:100%; --poster-color:transparent; background:#F3F4F8}
+  body.dark-stage model-viewer{background:#12172A}
+  body.dark-stage .slot{background:#12172A}
+  .slot .tag{
+    position:absolute; top:10px; left:10px; z-index:3;
+    background:rgba(15,20,36,.82); color:#fff; border:1px solid var(--line);
+    padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:600;
+    max-width:calc(100% - 20px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .slot .close{
+    position:absolute; top:10px; right:10px; z-index:3; width:26px; height:26px;
+    border-radius:8px; border:1px solid var(--line); background:rgba(15,20,36,.82);
+    color:#fff; cursor:pointer; font-size:15px; line-height:1; display:none;
+  }
+  .slot.loaded .close{display:block}
+  .hint{
+    margin:auto; text-align:center; color:var(--muted); padding:24px; pointer-events:none;
+  }
+  .hint .big{font-size:34px; margin-bottom:10px; opacity:.5}
+  .hint code{background:var(--panel2); padding:2px 6px; border-radius:5px; font-size:12px; color:var(--accent)}
+
+  aside{
+    width:320px; flex:none; border-left:1px solid var(--line); background:var(--panel);
+    overflow-y:auto; padding:14px;
+  }
+  aside.hidden{display:none}
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px}
+  .card h2{margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--accent)}
+  .row{display:flex; justify-content:space-between; gap:10px; padding:3px 0; font-size:12.5px}
+  .row span:first-child{color:var(--muted)}
+  .row span:last-child{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace; text-align:right; word-break:break-all}
+  .pill{display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:.3px}
+  .pill.ok{background:rgba(52,211,153,.16); color:var(--ok)}
+  .pill.warn{background:rgba(251,191,36,.16); color:var(--warn)}
+  .pill.info{background:rgba(129,140,248,.18); color:var(--accent)}
+  .delta{margin-top:2px; font-size:12px; color:var(--muted)}
+  .delta b{color:var(--ok)}
+  .err{color:var(--bad); font-size:12.5px; word-break:break-word}
+
+  #drop{
+    position:fixed; inset:0; z-index:50; display:none;
+    background:rgba(79,70,229,.22); backdrop-filter:blur(2px);
+    border:3px dashed var(--accent); align-items:center; justify-content:center;
+    font-size:19px; font-weight:700; color:#fff; pointer-events:none;
+  }
+  body.dragging #drop{display:flex}
+  @media (max-width:820px){
+    main{flex-direction:column}
+    aside{width:auto; border-left:0; border-top:1px solid var(--line); max-height:44vh}
+    #stage{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GLB Viewer</h1>
+  <label class="btn primary">Open .glb<input id="file" type="file" accept=".glb,.gltf" multiple></label>
+  <button class="btn" id="btnCompare" aria-pressed="false" title="Show two models side by side with synced cameras">Compare A/B</button>
+  <button class="btn" id="btnRotate" aria-pressed="false">Auto-rotate</button>
+  <button class="btn" id="btnBg">Dark background</button>
+  <button class="btn" id="btnReset">Reset camera</button>
+  <span class="sp"></span>
+  <button class="btn" id="btnPanel">Hide details</button>
+</header>
+
+<main>
+  <div id="stage">
+    <div class="slot empty" data-slot="0">
+      <div class="hint">
+        <div class="big">◻</div>
+        <div><b>Drag a .glb anywhere</b></div>
+        <div style="margin-top:6px">or use <code>Open .glb</code> above</div>
+        <div style="margin-top:14px;font-size:12px">Drop two files (or pick two at once) to compare them side by side</div>
+      </div>
+    </div>
+  </div>
+  <aside id="panel"></aside>
+</main>
+
+<div id="drop">Drop .glb to load</div>
+
+<script>
+const stage = document.getElementById('stage');
+const panel = document.getElementById('panel');
+const slots = [];           // { el, mv, name, size, stats, url }
+let compare = false, autoRotate = false;
+
+const fmtBytes = n => n < 1024 ? n + ' B'
+  : n < 1048576 ? (n/1024).toFixed(1) + ' KB'
+  : (n/1048576).toFixed(2) + ' MB';
+const fmtNum = n => n.toLocaleString('en-US');
+
+/* ---------- GLB parsing ---------------------------------------------------
+   Reads the JSON chunk out of the GLB container directly. Triangle counts stay
+   readable even for Draco-compressed files, because the accessors keep their
+   `count` even when their bufferView moves into the Draco extension.        */
+async function parseGlb(buffer){
+  const dv = new DataView(buffer);
+  if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('Not a .glb file (bad magic — a .gltf + separate .bin is not supported here)');
+  const version = dv.getUint32(4, true);
+  let off = 12, json = null, bin = null;
+  while (off < dv.byteLength) {
+    const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true);
+    const start = off + 8;
+    if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, start, len)));
+    else if (type === 0x004E4942) bin = { start, len };
+    off = start + len + (len % 4 ? 4 - (len % 4) : 0);
+  }
+  if (!json) throw new Error('No JSON chunk in GLB');
+
+  let tris = 0, prims = 0;
+  for (const m of json.meshes || []) for (const p of m.primitives || []) {
+    prims++;
+    const mode = p.mode === undefined ? 4 : p.mode;
+    if (mode !== 4) continue;                      // only TRIANGLES
+    if (p.indices !== undefined && json.accessors?.[p.indices]) tris += json.accessors[p.indices].count / 3;
+    else if (p.attributes?.POSITION !== undefined && json.accessors?.[p.attributes.POSITION]) tris += json.accessors[p.attributes.POSITION].count / 3;
+  }
+
+  // Texture sizes: decode each embedded image just far enough to read its dimensions.
+  const images = [];
+  for (const img of json.images || []) {
+    const rec = { mime: img.mimeType || '?', bytes: 0, w: 0, h: 0 };
+    if (img.bufferView !== undefined && bin) {
+      const bv = json.bufferViews[img.bufferView];
+      rec.bytes = bv.byteLength;
+      const bytes = new Uint8Array(buffer, bin.start + (bv.byteOffset || 0), bv.byteLength);
+      try {
+        const bmp = await createImageBitmap(new Blob([bytes], { type: rec.mime }));
+        rec.w = bmp.width; rec.h = bmp.height; bmp.close();
+      } catch { /* unknown codec — dimensions stay 0 */ }
+    }
+    images.push(rec);
+  }
+  const texBytes = images.reduce((s, i) => s + i.bytes, 0);
+
+  return {
+    version,
+    tris: Math.round(tris), prims,
+    meshes: (json.meshes || []).length,
+    materials: (json.materials || []).length,
+    nodes: (json.nodes || []).length,
+    images, texBytes,
+    extUsed: json.extensionsUsed || [],
+    extRequired: json.extensionsRequired || [],
+    generator: json.asset?.generator || '—',
+  };
+}
+
+/* ---------- slots ---------------------------------------------------------- */
+function makeSlot(i){
+  const el = document.createElement('div');
+  el.className = 'slot empty'; el.dataset.slot = i;
+  el.innerHTML = '<div class="hint"><div class="big">◻</div><div>Drop a second .glb here</div></div>';
+  stage.appendChild(el);
+  return el;
+}
+
+function syncCameras(source){
+  if (!compare) return;
+  const orbit = source.getCameraOrbit(), target = source.getCameraTarget(), fov = source.getFieldOfView();
+  for (const s of slots) {
+    if (!s.mv || s.mv === source) continue;
+    s.mv.cameraOrbit = `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`;
+    s.mv.cameraTarget = `${target.x}m ${target.y}m ${target.z}m`;
+    s.mv.fieldOfView = `${fov}deg`;
+  }
+}
+
+async function loadInto(index, file){
+  let el = stage.children[index] || makeSlot(index);
+  const prev = slots[index];
+  if (prev?.url) URL.revokeObjectURL(prev.url);
+
+  el.className = 'slot';
+  el.innerHTML = '';
+  const tag = document.createElement('div');
+  tag.className = 'tag';
+  tag.textContent = `${file.name} · ${fmtBytes(file.size)}`;
+  const close = document.createElement('button');
+  close.className = 'close'; close.textContent = '×'; close.title = 'Remove';
+  close.onclick = () => clearSlot(index);
+
+  const mv = document.createElement('model-viewer');
+  mv.setAttribute('camera-controls', '');
+  mv.setAttribute('interaction-prompt', 'none');
+  mv.setAttribute('environment-image', 'neutral');
+  mv.setAttribute('shadow-intensity', '0.7');
+  mv.setAttribute('exposure', '1');
+  mv.setAttribute('touch-action', 'pan-y');
+  if (autoRotate) mv.setAttribute('auto-rotate', '');
+
+  const url = URL.createObjectURL(file);
+  const t0 = performance.now();
+  const rec = { el, mv, name: file.name, size: file.size, url, stats: null, err: null, ms: 0 };
+  slots[index] = rec;
+
+  el.append(mv, tag, close);
+  el.classList.add('loaded');
+
+  let buf;
+  try {
+    buf = await file.arrayBuffer();
+    rec.stats = await parseGlb(buf);
+  } catch (e) { rec.err = e.message; }
+
+  mv.addEventListener('load', () => { rec.ms = Math.round(performance.now() - t0); render(); }, { once: true });
+  mv.addEventListener('error', (e) => {
+    rec.err = 'model-viewer failed to load this file' + (rec.stats?.extRequired?.length ? ` (requires: ${rec.stats.extRequired.join(', ')})` : '');
+    render();
+  }, { once: true });
+  mv.addEventListener('camera-change', (e) => { if (e.detail?.source === 'user-interaction') syncCameras(mv); });
+
+  mv.src = url;
+  render();
+}
+
+function clearSlot(i){
+  const s = slots[i];
+  if (s?.url) URL.revokeObjectURL(s.url);
+  slots[i] = null;
+  const el = stage.children[i];
+  if (el) {
+    el.className = 'slot empty';
+    el.innerHTML = '<div class="hint"><div class="big">◻</div><div>' + (i === 0 ? '<b>Drag a .glb anywhere</b>' : 'Drop a .glb here') + '</div></div>';
+  }
+  render();
+}
+
+function handleFiles(list){
+  const files = [...list].filter(f => /\.(glb|gltf)$/i.test(f.name));
+  if (!files.length) return;
+  if (files.length > 1 && !compare) setCompare(true);
+  files.slice(0, compare ? 2 : 1).forEach((f, i) => loadInto(compare ? i : 0, f));
+}
+
+function setCompare(on){
+  compare = on;
+  document.getElementById('btnCompare').setAttribute('aria-pressed', String(on));
+  if (on && !stage.children[1]) makeSlot(1);
+  if (!on) {
+    if (slots[1]?.url) URL.revokeObjectURL(slots[1].url);
+    slots[1] = null;
+    if (stage.children[1]) stage.children[1].remove();
+  }
+  render();
+}
+
+/* ---------- details panel -------------------------------------------------- */
+function statBlock(rec, other){
+  if (!rec) return '';
+  const s = rec.stats;
+  const rows = [];
+  rows.push(['File', rec.name]);
+  rows.push(['Size', fmtBytes(rec.size)]);
+  if (other && other.size && other !== rec) {
+    const pct = (1 - rec.size / other.size) * 100;
+    if (Math.abs(pct) > 0.05) rows.push(['vs other', (pct > 0 ? '−' : '+') + Math.abs(pct).toFixed(1) + '%']);
+  }
+  if (rec.ms) rows.push(['Load time', rec.ms + ' ms']);
+  if (s) {
+    rows.push(['Triangles', fmtNum(s.tris)]);
+    rows.push(['Meshes / prims', `${s.meshes} / ${s.prims}`]);
+    rows.push(['Materials', String(s.materials)]);
+    rows.push(['Nodes', String(s.nodes)]);
+    rows.push(['Textures', `${s.images.length}${s.images.length ? ' · ' + fmtBytes(s.texBytes) : ''}`]);
+    if (s.texBytes) rows.push(['Texture share', Math.round(s.texBytes / rec.size * 100) + '% of file']);
+    rows.push(['Generator', s.generator]);
+  }
+  let html = `<div class="card"><h2>${rec === slots[0] ? 'Model A' : 'Model B'}</h2>`;
+  html += rows.map(([k, v]) => `<div class="row"><span>${k}</span><span>${v}</span></div>`).join('');
+  if (rec.err) html += `<div class="err" style="margin-top:8px">⚠ ${rec.err}</div>`;
+  if (s) {
+    const draco = s.extUsed.includes('KHR_draco_mesh_compression');
+    const meshopt = s.extUsed.includes('EXT_meshopt_compression');
+    const webp = s.extUsed.includes('EXT_texture_webp');
+    const ktx2 = s.extUsed.includes('KHR_texture_basisu');
+    const pills = [];
+    pills.push(draco ? '<span class="pill ok">Draco</span>' : '<span class="pill warn">no geometry compression</span>');
+    if (meshopt) pills.push('<span class="pill ok">Meshopt</span>');
+    if (webp) pills.push('<span class="pill info">WebP textures</span>');
+    if (ktx2) pills.push('<span class="pill info">KTX2</span>');
+    html += `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${pills.join('')}</div>`;
+    if (s.images.length) {
+      html += '<div style="margin-top:10px">' + s.images.map(im =>
+        `<div class="row"><span>${(im.mime || '').replace('image/', '')}${im.w ? ` ${im.w}×${im.h}` : ''}</span><span>${fmtBytes(im.bytes)}</span></div>`
+      ).join('') + '</div>';
+    }
+    if (s.extUsed.length) html += `<div class="delta" style="margin-top:8px">extensions: ${s.extUsed.join(', ')}</div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function render(){
+  const a = slots[0], b = slots[1];
+  if (!a && !b) {
+    panel.innerHTML = `<div class="card"><h2>No model loaded</h2>
+      <div style="color:var(--muted);font-size:12.5px">Drag a <code>.glb</code> onto the window.
+      Drop two to compare them side by side with synced cameras.</div></div>
+      <div class="card"><h2>Tip</h2>
+      <div style="color:var(--muted);font-size:12.5px;line-height:1.7">
+      Works fully offline once the page is loaded — no file ever leaves your
+      browser, it's read locally via <code>URL.createObjectURL</code>.</div></div>`;
+    return;
+  }
+  let html = statBlock(a, b) + statBlock(b, a);
+  if (a && b && a.stats && b.stats) {
+    const pct = (1 - b.size / a.size) * 100;
+    html += `<div class="card"><h2>A → B</h2>
+      <div class="row"><span>Size</span><span>${fmtBytes(a.size)} → ${fmtBytes(b.size)}</span></div>
+      <div class="row"><span>Reduction</span><span>${pct >= 0 ? pct.toFixed(1) + '%' : '+' + Math.abs(pct).toFixed(1) + '%'}</span></div>
+      <div class="row"><span>Triangles</span><span>${fmtNum(a.stats.tris)} → ${fmtNum(b.stats.tris)}</span></div>
+      <div class="row"><span>Textures</span><span>${fmtBytes(a.stats.texBytes)} → ${fmtBytes(b.stats.texBytes)}</span></div>
+      <div class="delta">Drag either viewport — the other follows.</div></div>`;
+  }
+  panel.innerHTML = html;
+}
+
+/* ---------- events --------------------------------------------------------- */
+document.getElementById('file').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
+document.getElementById('btnCompare').onclick = () => setCompare(!compare);
+document.getElementById('btnRotate').onclick = (e) => {
+  autoRotate = !autoRotate;
+  e.currentTarget.setAttribute('aria-pressed', String(autoRotate));
+  slots.forEach(s => s?.mv && (autoRotate ? s.mv.setAttribute('auto-rotate', '') : s.mv.removeAttribute('auto-rotate')));
+};
+document.getElementById('btnBg').onclick = (e) => {
+  document.body.classList.toggle('dark-stage');
+  e.currentTarget.textContent = document.body.classList.contains('dark-stage') ? 'Light background' : 'Dark background';
+};
+document.getElementById('btnReset').onclick = () => slots.forEach(s => {
+  if (!s?.mv) return;
+  s.mv.cameraOrbit = 'auto auto auto'; s.mv.cameraTarget = 'auto auto auto';
+  s.mv.fieldOfView = 'auto'; s.mv.jumpCameraToGoal();
+});
+document.getElementById('btnPanel').onclick = (e) => {
+  panel.classList.toggle('hidden');
+  e.currentTarget.textContent = panel.classList.contains('hidden') ? 'Show details' : 'Hide details';
+};
+
+let dragDepth = 0;
+addEventListener('dragenter', e => { e.preventDefault(); if (++dragDepth === 1) document.body.classList.add('dragging'); });
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('dragleave', e => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+  // Dropping directly onto the right-hand viewport targets slot B.
+  const slotEl = e.target.closest?.('.slot');
+  const idx = compare && slotEl ? Number(slotEl.dataset.slot) : null;
+  const files = [...e.dataTransfer.files].filter(f => /\.(glb|gltf)$/i.test(f.name));
+  if (!files.length) return;
+  if (idx !== null && files.length === 1) loadInto(idx, files[0]);
+  else handleFiles(e.dataTransfer.files);
+});
+
+render();
+</script>
+</body>
+</html>
